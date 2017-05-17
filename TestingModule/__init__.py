@@ -11,8 +11,3 @@ new_list = tuple(new_tuple)
 print("jos jedna nova promjena")
 print("Elena provjerava")
 
-print("ja bi kuci")
-
-print("ajde Nensi")
-
-print("ocemo li vise")
