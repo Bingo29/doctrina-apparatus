@@ -18,3 +18,5 @@ print("znamo samo print koristiti :((")
 print("Hocemo koliziju")
 
 print("ja bi kuci")
+
+print("ajde Nensi")
