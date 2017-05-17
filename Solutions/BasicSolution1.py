@@ -15,7 +15,11 @@ povratna = fja("proba")
 a = 5
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 print(":)")
+=======
+print("ja bi nesto uploada")
+>>>>>>> origin/master
 =======
 print("ja bi nesto uploada")
 >>>>>>> origin/master
