@@ -13,3 +13,4 @@ print("Elena provjerava")
 
 print("Nensi pokusaj")
 print("e nes zaj** stipu")
+print("ja bi kuci")
