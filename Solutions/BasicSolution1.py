@@ -13,3 +13,5 @@ def fja(strText):
 povratna = fja("proba")
 
 a = 5
+
+print("ja bi nesto uploada")
