@@ -14,8 +14,5 @@ print("Elena provjerava")
 print("Nensi pokusaj")
 print("e nes zaj** stipu")
 print("znamo samo print koristiti :((")
-
 print("Hocemo koliziju")
-
 print("ja bi kuci")
-

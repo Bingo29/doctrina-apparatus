@@ -4,22 +4,8 @@ Created on 15. svi 2017.
 @author: Elena
 '''
 
+import numpy as np
+import pandas as pd
 
-def fja(strText):
-    print(strText)
-    return [5, 3]
-    
-
-povratna = fja("proba")
-
-a = 5
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-print(":)")
-=======
-print("ja bi nesto uploada")
->>>>>>> origin/master
-=======
-print("ja bi nesto uploada")
->>>>>>> origin/master
+data_file = pd.read_csv('train.csv')
+print(data_file[0:50])
