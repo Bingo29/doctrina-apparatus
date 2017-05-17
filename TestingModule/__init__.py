@@ -15,4 +15,4 @@ print(len(new_list))
 print(max(new_list))
 print(min(new_list))
 
-print("Proba proba")
+print("Proba proba") 
