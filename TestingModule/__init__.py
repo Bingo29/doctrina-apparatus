@@ -11,3 +11,4 @@ new_list = tuple(new_tuple)
 print("jos jedna nova promjena")
 print("Elena provjerava")
 
+print("nensi")
