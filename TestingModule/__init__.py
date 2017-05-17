@@ -19,3 +19,4 @@ print("Hocemo koliziju")
 
 print("ja bi kuci")
 
+print("dosta je vise")
