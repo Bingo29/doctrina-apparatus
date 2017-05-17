@@ -12,3 +12,4 @@ print("jos jedna nova promjena")
 print("Elena provjerava")
 
 print("Nensi pokusaj")
+print("e nes zaj** stipu")
