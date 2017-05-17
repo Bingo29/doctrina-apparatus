@@ -13,3 +13,9 @@ def fja(strText):
 povratna = fja("proba")
 
 a = 5
+
+<<<<<<< HEAD
+print(":)")
+=======
+print("ja bi nesto uploada")
+>>>>>>> origin/master
