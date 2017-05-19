@@ -1,11 +1,10 @@
-'''
-Created on 15. svi 2017.
+import csv
 
-@author: Elena
-'''
+path = "C:\\Users\\MILICA\\Desktop\\doctrina-apparatus\\Solutions\\train.csv"
 
-import numpy as np
-import pandas as pd
 
-data_file = pd.read_csv('train.csv')
-print(data_file[0:50])
+reader = csv.reader(file)
+
+data = [row for row in reader]
+
+print(data)
