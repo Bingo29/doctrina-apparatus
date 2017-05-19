@@ -1,9 +1,3 @@
-'''
-Created on 15. svi 2017.
-
-@author: Elena
-'''
-
 import numpy as np
 import pandas as pd
 from test.test_asyncio.test_events import data_file
