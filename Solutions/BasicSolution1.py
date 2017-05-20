@@ -19,4 +19,5 @@ for i in range(0, rows):
         print(tablecolrow[j][i], end=' ')
     print("", end='\n')
 
-tablerowcol = np.transpose(tablecolrow)
+# This takes less memory then np.transpose
+tablerowcol = list(zip(*tablecolrow))
