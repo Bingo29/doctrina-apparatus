@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from test.test_asyncio.test_events import data_file
 from array import array
 
 def okreniTablicu(tablicacolrow):
@@ -9,9 +8,8 @@ def okreniTablicu(tablicacolrow):
     novaTablica = [[None] * col for x in range(0, row)]
     for i in range(0, col):
         for j in range(0, row):
-            novaTablica[j][i] = tablicacolrow[i][j]
-        
-    return novaTablica;
+            novaTablica[j][i] = tablicacolrow[i][j]        
+return novaTablica;
 
 
 data = pd.read_csv('train.csv', sep=',', lineterminator="\n")
@@ -35,3 +33,5 @@ for i in range(0, rows):
     for j in range(0, 6):
         print(tablerowcol[i][j], end=' ')
     print("", end='\n')    
+
+print(tablerowcol[4][5])
