@@ -1,18 +1,36 @@
-import random
-import sys
-import os
+import pandas as pd
+from array import array
 
-print("Novi kod")
+def okreniTablicu(tablicacolrow):
+    col = len(tablicacolrow)
+    row = len(tablicacolrow[0])
+    novaTablica = [[None] * col for x in range(0, row)]
+    for i in range(0, col):
+        for j in range(0, row):
+            novaTablica[j][i] = tablicacolrow[i][j]
+        
+    return novaTablica;
 
 
-pi_tuple = (3,1,4,1,5,9)
-new_tuple = list(pi_tuple)
-new_list = tuple(new_tuple)
-print("jos jedna nova promjena")
-print("Elena provjerava")
-print("Nensi pokusaj")
-print("e nes zaj** stipu")
-print("znamo samo print koristiti :((")
-print("Hocemo koliziju")
-print("ja bi kuci")
-print("nensi")
+data = pd.read_csv('train.csv', sep=',', lineterminator="\n")
+
+cols = 6
+rows = len(data)
+
+tablecolrow = []
+tablerowcol = []
+
+for j, c in enumerate(data):
+    tablecolrow.append([])
+    for i, r in enumerate(data[c]):
+        tablecolrow[j].append(r)
+
+tablerowcol = okreniTablicu(tablecolrow)
+
+for i in range(0, rows):
+    for j in range(0, 6):
+        print(tablerowcol[i][j], end=' ')
+    print("", end='\n')    
+    
+print(tablecolrow[4][5])
+print(tablerowcol[5][4])
