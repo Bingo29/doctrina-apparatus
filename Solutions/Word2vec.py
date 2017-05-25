@@ -1,0 +1,1 @@
+print("Ovdje pisite rjesenje za word2vec")
