@@ -95,5 +95,7 @@ znacajkePitanja = None
 
 print("Gotovo")
 
-print(tablerowcol)
+tablerowcol = array(tablerowcol)
+
+print("Gotovo1")
 
