@@ -3,9 +3,11 @@ import re
 import string
 
 from nltk.corpus import stopwords # Import the stop word list
+from numpy import array
 cachedStopWords = set(stopwords.words("english"))
 from nltk.stem import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
+from sklearn.feature_extraction.text import CountVectorizer
 
 #remove punctuation marks from question
 #returns lower case string
@@ -49,13 +51,31 @@ for j, c in enumerate(data):
 tablerowcol = list(zip(*tablecolrow))
 
 tablerowcol = FilterTable(tablerowcol)
-
+'''
 for i in range(0, rows):
     for j in range(0, 6):
         print(tablerowcol[i][j], end=' ')
     print("", end='\n')
+'''
 
+# Initialize the "CountVectorizer" object, which is scikit-learn's
+# bag of words tool.  
+vectorizer = CountVectorizer(analyzer = "word",   \
+                             tokenizer = None,    \
+                             preprocessor = None, \
+                             stop_words = None,   \
+                             max_features = 100) 
+
+pitanja = (tablerowcol[0][3], tablerowcol[3][4])
+
+for pitanje in pitanja:
+    print(pitanje)
     
+tablerowcol = array(tablerowcol)
+    
+questionBase = tablerowcol[:, 3:5]
 
+vectorizer.fit(questionBase[:, 0] + questionBase[:, 1])
 
+tablerowcol[:, 3:5] = [vectorizer.transform(questionBase[:, 0]), vectorizer.transform(questionBase[:, 1])]
 
