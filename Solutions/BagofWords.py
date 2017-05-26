@@ -50,6 +50,8 @@ for j, c in enumerate(data):
 # This takes less memory than np.transpose
 tablerowcol = list(zip(*tablecolrow))
 
+tablecolrow = None
+
 tablerowcol = FilterTable(tablerowcol)
 '''
 for i in range(0, rows):
@@ -75,9 +77,21 @@ tablerowcol = array(tablerowcol)
     
 questionBase = tablerowcol[:, 3:5]
 
-vectorizer.fit(questionBase[:, 0] + questionBase[:, 1])
+allQuestions = questionBase[:, 0].tolist() + questionBase[:, 1].tolist()
 
-tablerowcol[:, 3:5] = [vectorizer.transform(questionBase[:, 0]), vectorizer.transform(questionBase[:, 1])]
+vectorizer.fit(allQuestions)
+
+znacajkePitanja = [vectorizer.transform(questionBase[:, 0]), vectorizer.transform(questionBase[:, 1])]
+
+znacajkePitanja = array([znacajkePitanja[0].toarray(), znacajkePitanja[1].toarray()])
+
+tablerowcol = tablerowcol.tolist()
+
+for i in range(0, len(znacajkePitanja[0])):
+    tablerowcol[i][3] = znacajkePitanja[0][i].tolist()
+    tablerowcol[i][4] = znacajkePitanja[1][i].tolist()
+
+znacajkePitanja = None
 
 print("Gotovo")
 
