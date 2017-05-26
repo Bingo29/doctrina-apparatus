@@ -70,6 +70,7 @@ vectorizer = CountVectorizer(analyzer = "word",   \
 
 pitanja = (tablerowcol[0][3], tablerowcol[3][4])
 
+
 #for pitanje in pitanja:
 #    print(pitanje)
     
