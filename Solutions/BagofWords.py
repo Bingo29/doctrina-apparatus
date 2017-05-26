@@ -68,8 +68,8 @@ vectorizer = CountVectorizer(analyzer = "word",   \
 
 pitanja = (tablerowcol[0][3], tablerowcol[3][4])
 
-for pitanje in pitanja:
-    print(pitanje)
+#for pitanje in pitanja:
+#    print(pitanje)
     
 tablerowcol = array(tablerowcol)
     
@@ -78,4 +78,8 @@ questionBase = tablerowcol[:, 3:5]
 vectorizer.fit(questionBase[:, 0] + questionBase[:, 1])
 
 tablerowcol[:, 3:5] = [vectorizer.transform(questionBase[:, 0]), vectorizer.transform(questionBase[:, 1])]
+
+print("Gotovo")
+
+print(tablerowcol)
 
