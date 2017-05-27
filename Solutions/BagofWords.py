@@ -1,9 +1,12 @@
 import pandas as pd
 import re
 import string
+from sklearn import svm
+from sklearn.externals import joblib
 
 from nltk.corpus import stopwords # Import the stop word list
 from numpy import array
+from sklearn.svm.classes import SVC
 cachedStopWords = set(stopwords.words("english"))
 from nltk.stem import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -95,7 +98,22 @@ znacajkePitanja = None
 
 print("Gotovo")
 
-tablerowcol = array(tablerowcol)
+#learning data = X, Y
+svmLearningData = [[], []]
 
-print("Gotovo1")
+for row in tablerowcol:
+    svmLearningData[0].append(row[3] + row[4])
+    svmLearningData[1].append(int(row[5]))
 
+
+svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=100)
+
+print("Learning started")
+
+svmKlasifikator.fit(svmLearningData[0], svmLearningData[1])
+
+print("Learning ended")
+
+joblib.dump(svmKlasifikator, 'BagOfWordsSVMNauceni.pkl') 
+
+print("Spremljen je napredak ucenja")
