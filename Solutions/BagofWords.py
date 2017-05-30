@@ -84,9 +84,29 @@ def loadData(strFileName):
     return dataTable
 
 def predict(data, strOutputfile):
-    pass
+    svmModel = joblib.load('BagOfWordsSVMNauceni.pkl')
+    vectorizer = joblib.load('BagOfWordsVectorizerNauceni.pkl')
+    data[0] = FilterQuestions(data[0])
+    data[1] = FilterQuestions(data[1])
+    
+    znacajkePitanja = [vectorizer.transform(data[0]), vectorizer.transform(data[1])]    
+    znacajkePitanja = hstack(znacajkePitanja).tocsr()
+    print("Predicting started")
+    tmStart = timer()
+    prediction = svmModel.predict(znacajkePitanja)
+    tmEnd = timer()
+    print("Predicting ended")
+    print("Predicting lasted", tmEnd - tmStart)
+    
+    fileOutout = open(strOutputfile, "w")
+    fileOutout.write("test_id,is_duplicate\n")
+    for i, p in enumerate(prediction):
+        fileOutout.write(",".join([str(i), str(p)])+"\n")
+        
+    print("Prediction saved: Done")
 
 learningTable = loadData('train.csv')
 learnModel(learningTable[3:6])
-testTable = loadData('train.csv')
-predict(testTable, 'predikcija.out')
+testTable = loadData('test.csv')
+predictionData = [testTable[1], testTable[2]]
+predict(predictionData, 'predikcija.out')
