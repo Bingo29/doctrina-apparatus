@@ -1,20 +1,20 @@
-import pandas as pd
 import re
 import string
-from sklearn import svm
-from sklearn.externals import joblib
 from timeit import default_timer as timer
-from scipy.sparse import hstack, vstack
 
-from nltk.corpus import stopwords # Import the stop word list
-from numpy import array
-from sklearn.svm.classes import SVC
-cachedStopWords = set(stopwords.words("english"))
+from nltk.corpus import stopwords  # Import the stop word list
 from nltk.stem import WordNetLemmatizer
-lemmatizer = WordNetLemmatizer()
+from scipy.sparse import hstack
+from sklearn.externals import joblib
 from sklearn.feature_extraction.text import CountVectorizer
-from scipy.sparse import csr_matrix
-from scipy.sparse import coo_matrix
+from sklearn.svm.classes import SVC
+
+import pandas as pd
+import os
+
+
+cachedStopWords = set(stopwords.words("english"))
+lemmatizer = WordNetLemmatizer()
 
 #remove punctuation marks from question
 #returns lower case string
@@ -28,107 +28,65 @@ def RemovePunctuationCharacters(strQuestion):
 
 #removes unneccecery parts of questions in order to prepare it for bag of words
 #returns filtered table
-def FilterTable(tbTableRowCol):
-    tbRetval = tbTableRowCol
-    for i, row in enumerate(tbRetval):
-        tbRetval[i] = list(row)
+def FilterQuestions(arrstrQuestions):
+    for i, strQuestion in enumerate(arrstrQuestions):
+        punctuationlessQuestion = RemovePunctuationCharacters(strQuestion) 
+        punctuationlessQuestion = ' '.join([word for word in punctuationlessQuestion.split() if word not in cachedStopWords])
+        punctuationlessQuestion = " ".join([lemmatizer.lemmatize(i) for i in punctuationlessQuestion.split()])
+        arrstrQuestions[i] = punctuationlessQuestion
         
-    for i in range(0, len(tbTableRowCol)):
-        for j in range(0, len(tbTableRowCol[0])):
-            if j == 3 or j == 4:
-                punctuationlessQuestion = RemovePunctuationCharacters(tbTableRowCol[i][j]) 
-                tbRetval[i][j] = ' '.join([word for word in punctuationlessQuestion.split() if word not in cachedStopWords])
-                tbRetval[i][j] =" ".join([lemmatizer.lemmatize(i) for i in tbRetval[i][j].split()])
-        if i % 1000 == 0:
-            print(i)
-    return tbRetval
+    return arrstrQuestions
 
-data = pd.read_csv('train.csv', sep=',', lineterminator="\n")
-
-cols = 6
-rows = len(data)
-
-tablecolrow = []
-tablerowcol = []
-
-for j, c in enumerate(data):
-    tablecolrow.append([])
-    for i, r in enumerate(data[c]):
-        tablecolrow[j].append(r)
-
-# This takes less memory than np.transpose
-tablerowcol = list(zip(*tablecolrow))
-
-tablecolrow = None
-
-tablerowcol = FilterTable(tablerowcol)
-'''
-for i in range(0, rows):
-    for j in range(0, 6):
-        print(tablerowcol[i][j], end=' ')
-    print("", end='\n')
-'''
-
-# Initialize the "CountVectorizer" object, which is scikit-learn's
-# bag of words tool.  
-vectorizer = CountVectorizer(analyzer = "word",   \
+def learnModel(data):
+    if os.path.isfile("BagOfWordsSVMNauceni.pkl"):
+        return None
+    data[0] = FilterQuestions(data[0])
+    data[1] = FilterQuestions(data[1])
+    # Initialize the "CountVectorizer" object, which is scikit-learn's
+    # bag of words tool.  
+    vectorizer = CountVectorizer(analyzer = "word",   \
                              tokenizer = None,    \
                              preprocessor = None, \
                              stop_words = None,   \
                              max_features = 20000) 
-
     
+    allQuestions = data[0] + data[1]
 
-q1 = []
-q2 = []
-
-for row in tablerowcol:
-    q1.append(row[3])
-    q2.append(row[4])
+    vectorizer.fit(allQuestions)    
+    joblib.dump(vectorizer, 'BagOfWordsVectorizerNauceni.pkl') 
     
-questionBase = [q1, q2]
+    znacajkePitanja = [vectorizer.transform(data[0]), vectorizer.transform(data[1])]
+    for i, r in enumerate(data[2]):
+        data[2][i] = int(r)
+        
+    znacajkePitanja = hstack(znacajkePitanja).tocsr()
+    svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=1000000)
+   
+    print("Learning started")
+    tmStart = timer()
+    svmKlasifikator.fit(znacajkePitanja, data[2])
+    tmEnd = timer()
+    print("Learning ended")
+    print("Learning lasted", tmEnd - tmStart)
+    
+    joblib.dump(svmKlasifikator, 'BagOfWordsSVMNauceni.pkl') 
+    print("Spremljen je napredak ucenja")
 
-allQuestions = q1 + q2
+def loadData(strFileName):
+    data = pd.read_csv(strFileName, sep=',', lineterminator="\n")
+    dataTable = []
+    
+    for j, c in enumerate(data):
+        dataTable.append([])
+        for cell in data[c]:
+            dataTable[j].append(cell)
+        
+    return dataTable
 
-vectorizer.fit(allQuestions)
+def predict(data, strOutputfile):
+    pass
 
-joblib.dump(vectorizer, 'BagOfWordsVectorizerNauceni.pkl') 
-
-znacajkePitanja = [vectorizer.transform(q1), vectorizer.transform(q2)]
-
-print("Bag of words done")
-
-for i in range(0, znacajkePitanja[0].shape[0]):
-    tablerowcol[i][3] = znacajkePitanja[0][i]
-    tablerowcol[i][4] = znacajkePitanja[1][i]
-    if i % 1000 == 0:
-        print(i)
-
-znacajkePitanja = None
-
-print("Gotovo")
-
-#learning data = X, Y
-svmLearningData = [[], []]
-
-for i, row in enumerate(tablerowcol):
-    svmLearningData[0].append(hstack([row[3], row[4]]).tocsr())
-    svmLearningData[1].append(int(row[5]))
-    if i % 1000 == 0:
-        print(i)
-
-svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=1000000)
-print("Sparse")
-Xsparse = vstack(svmLearningData[0]).tocsr()
-print("Learning started")
-tmStart = timer()
-svmKlasifikator.fit(Xsparse, svmLearningData[1])
-tmEnd = timer()
-print("Learning ended")
-print("Learning lasted", tmEnd - tmStart)
-
-joblib.dump(svmKlasifikator, 'BagOfWordsSVMNauceni.pkl') 
-
-print("Spremljen je napredak ucenja")
-
-svmUcitani = joblib.load('BagOfWordsSVMNauceni.pkl') 
+learningTable = loadData('train.csv')
+learnModel(learningTable[3:6])
+testTable = loadData('train.csv')
+predict(testTable, 'predikcija.out')
