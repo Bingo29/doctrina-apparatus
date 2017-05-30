@@ -115,7 +115,7 @@ for i, row in enumerate(tablerowcol):
     if i % 1000 == 0:
         print(i)
 
-svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=1000)
+svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=1000000)
 print("Sparse")
 Xsparse = vstack(svmLearningData[0]).tocsr()
 print("Learning started")
