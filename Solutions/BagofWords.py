@@ -92,6 +92,8 @@ allQuestions = q1 + q2
 
 vectorizer.fit(allQuestions)
 
+joblib.dump(vectorizer, 'BagOfWordsVectorizerNauceni.pkl') 
+
 znacajkePitanja = [vectorizer.transform(q1), vectorizer.transform(q2)]
 
 print("Bag of words done")
