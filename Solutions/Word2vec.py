@@ -1,28 +1,33 @@
-print("Ovdje pisite rjesenje za word2vec")
-
+import os
 import pandas as pd
+import re
+import string
 
-data = pd.read_csv('train.csv', sep=',', lineterminator="\n")
+import nltk.data
+nltk.download()
 
-cols = 6
-rows = len(data)
+from bs4 import BeautifulSoup
+import re
+from nltk.corpus import stopwords
 
-tablecolrow = []
-tablerowcol = []
+tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
-for j, c in enumerate(data):
-    tablecolrow.append([])
-    for i, r in enumerate(data[c]):
-        tablecolrow[j].append(r)
+def RemovePunctuationCharacters(strQuestion):
+    strRetval = str(strQuestion)
+    for char in string.punctuation:
+        strRetval = strRetval.replace(char, "")
+        
+    strRetval = re.sub(' +', ' ', strRetval)
+    return strRetval.lower().split()
 
-# This takes less memory than np.transpose
-tablerowcol = list(zip(*tablecolrow))
+train = pd.read_csv('train.csv', sep=',', header=0, lineterminator="\n")
 
-for i in range(0, rows):
-    for j in range(0, 6):
-        print(tablerowcol[i][j], end=' ')
-    print("", end='\n')
+print(RemovePunctuationCharacters(train["question1"][58]))
 
+for i in range (0, len(train)):
+    RemovePunctuationCharacters(train["question1"][i])
+    RemovePunctuationCharacters(train["question2"][i])
+   
     
 
 
