@@ -2,9 +2,16 @@ import os
 import pandas as pd
 import re
 import string
+from timeit import default_timer as timer
 
 import nltk.data
 #nltk.download()
+
+import warnings
+warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
+
+import gensim
+
 
 from nltk.stem import WordNetLemmatizer
 from gensim.parsing.preprocessing import remove_stopwords
@@ -13,10 +20,14 @@ lemmatizer = WordNetLemmatizer()
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 import numpy as np
+
 from scipy.sparse import hstack
-import scipy.sparse
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.svm.classes import SVC
 
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+
 
 def RemovePunctuationCharacters( strQuestion, remove_stopwords = False ):
     strRetval = str(strQuestion)
@@ -50,7 +61,7 @@ def learn_w2v ( sentences ):
     import logging
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',\
     level=logging.INFO)
-
+'''
     from gensim.models import word2vec
 
     print ("Training model...")
@@ -60,14 +71,14 @@ def learn_w2v ( sentences ):
     
     # If you don't plan to train the model any further, calling 
     # init_sims will make the model much more memory-efficient.
-    #model.init_sims(replace=True)
+    # model.init_sims(replace=True)
     
     # It can be helpful to create a meaningful model name and 
     # save the model for later use. You can load it later using Word2Vec.load()
     model_name = "300features_40minwords_10context"
     model.save(model_name)
     print ("Gotovo")
-
+'''
 def makeFeatureVec(words, model, num_features):
     # Function to average all of the word vectors in a given paragraph
     # Pre-initialize an empty numpy array (for speed)
@@ -128,7 +139,7 @@ def get_avg( train ):
         else: exit
         
     #train_allQuestions = train_sentences1 + train_sentences2
-       
+    
     #learn_w2v(allQuestions)
     from gensim.models import Word2Vec
     model = Word2Vec.load("300features_40minwords_10context")
@@ -142,7 +153,23 @@ def get_avg( train ):
 
     
     return trainDataVecs
+  
+            
+train = pd.read_csv('train.csv', sep=',', header=0, lineterminator="\n")
+test = pd.read_csv('test.csv', sep=',', header=0, lineterminator="\n")
 
+question1 = []
+question2 = []
+
+for question in train["question1"]:
+    question1 += question_to_sentences(question, False)
+    
+for question in train["question2"]:
+    question2 += question_to_sentences(question, False)
+    
+allQuestion = question1 + question2
+learn_w2v(allQuestion) 
+   
 
 train = pd.read_csv('train.csv', sep=',', header=0, lineterminator="\n")
 test = pd.read_csv('test.csv', sep=',', header=0, lineterminator="\n")
@@ -155,17 +182,99 @@ for duplicate in train["is_duplicate"]:
 trainDataVecs = get_avg( train )
 testDataVecs = get_avg( test )
 
-# Fit a random forest to the training data, using 100 trees
-from sklearn.ensemble import RandomForestClassifier
-forest = RandomForestClassifier( n_estimators = 100 )
+'''
+def learnModel( train ):
+    if os.path.isfile("Word2VecSVMNauceni.pkl"):
+        return None
+    question1 = []
+    question2 = []
+    data = []
+    i = 0
+    for question in train["question1"]:
+        i += 1
+        if i < 20:
+            question1 += question_to_sentences(question, False)
+        else: exit
 
-print ("Fitting a random forest to labeled training data...")
-forest = forest.fit( trainDataVecs, data )
+    i = 0
+    for question in train["question2"]:
+        i += 1
+        if i < 20:
+            question2 += question_to_sentences(question, False)
+        else: exit
+'''
 
-result = forest.predict( testDataVecs )
+def learnModel(data):
+    if os.path.isfile("Word2VecSVMNauceni.pkl"):
+        return None
+    data[0] = question1(data[0])
+    data[1] = question2(data[1])
+    # Initialize the "CountVectorizer" object, which is scikit-learn's
+    # bag of words tool.  
+    vectorizer = CountVectorizer(analyzer = "word",   \
+                             tokenizer = None,    \
+                             preprocessor = None, \
+                             stop_words = None,   \
+                             max_features = 10000) 
+    
+    allQuestions = data[0] + data[1]
 
-# Write the test results 
-output = pd.DataFrame( data={"id":test["id"], "sentiment":result} )
-output.to_csv( "Word2Vec_AverageVectors.csv", index=False, quoting=3 )
+    vectorizer.fit(allQuestions)    
+    joblib.dump(vectorizer, 'Word2VecVectorizerNauceni.pkl') 
+    
+    znacajkePitanja = [vectorizer.transform(data[0]), vectorizer.transform(data[1])]
+    for i, r in enumerate(data[2]):
+        data[2][i] = int(r)
+        
+    znacajkePitanja = hstack(znacajkePitanja).tocsr()
+    svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=1000000)
+   
+    print("Learning started")
+    tmStart = timer()
+    svmKlasifikator.fit(znacajkePitanja, data[2])
+    tmEnd = timer()
+    print("Learning ended")
+    print("Learning lasted", tmEnd - tmStart)
+    
+    joblib.dump(svmKlasifikator, 'Word2VecSVMNauceni.pkl') 
+    print("Spremljen je napredak ucenja")
+'''
+def loadData(strFileName):
+    data = pd.read_csv(strFileName, sep=',', lineterminator="\n")
+    dataTable = []
+    
+    for j, c in enumerate(data):
+        dataTable.append([])
+        for cell in data[c]:
+            dataTable[j].append(cell)
+        
+    return dataTable
 
-print("Gotovo")
+def predict(data, strOutputfile):
+    svmModel = joblib.load('Word2VecSVMNauceni.pkl')
+    vectorizer = joblib.load('Word2VecVectorizerNauceni.pkl')
+    data[0] = question1(data[0])
+    data[1] = question2(data[1])
+    
+    znacajkePitanja = [vectorizer.transform(data[0]), vectorizer.transform(data[1])]    
+    znacajkePitanja = hstack(znacajkePitanja).tocsr()
+    print("Predicting started")
+    tmStart = timer()
+    prediction = svmModel.predict(znacajkePitanja)
+    tmEnd = timer()
+    print("Predicting ended")
+    print("Predicting lasted", tmEnd - tmStart)
+    
+    fileOutout = open(strOutputfile, "w")
+    fileOutout.write("test_id,is_duplicate\n")
+    for i, p in enumerate(prediction):
+        fileOutout.write(",".join([str(i), str(p)])+"\n")
+        
+    print("Prediction saved: Done")
+
+learningTable = loadData('train.csv')
+learnModel(learningTable[3:6])
+testTable = loadData('test.csv')
+predictionData = [testTable[1], testTable[2]]
+predict(predictionData, 'predikcija.out')
+'''
