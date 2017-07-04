@@ -7,27 +7,16 @@ from timeit import default_timer as timer
 import nltk.data
 #nltk.download()
 
-import warnings
-warnings.filterwarnings(action='ignore', category=UserWarning, module='gensim')
-
-import gensim
-
-
-from nltk.stem import WordNetLemmatizer
 from gensim.parsing.preprocessing import remove_stopwords
-lemmatizer = WordNetLemmatizer()
 
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 import numpy as np
 
-from scipy.sparse import hstack
 from sklearn.externals import joblib
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.svm.classes import SVC
-
-tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-
+from nltk.tbl import feature
+from scipy.sparse import coo_matrix, hstack
 
 def RemovePunctuationCharacters( strQuestion, remove_stopwords = False ):
     strRetval = str(strQuestion)
@@ -42,7 +31,6 @@ def RemovePunctuationCharacters( strQuestion, remove_stopwords = False ):
         stops = set(stopwords.words("english"))
         words = [w for w in words if not w in stops]
 
-    
     return words
 
 def question_to_sentences( question, remove_stopwords = False ):
@@ -50,7 +38,18 @@ def question_to_sentences( question, remove_stopwords = False ):
     sentences.append( RemovePunctuationCharacters(question, remove_stopwords) )
     return sentences
 
-def learn_w2v ( sentences ):
+def learn_w2v ( train ):
+    
+    question1 = []
+    question2 = []
+
+    for question in train["question1"]:
+        question1 += question_to_sentences(question, False)
+    
+    for question in train["question2"]:
+        question2 += question_to_sentences(question, False)
+        
+    sentences = question1 + question2
     # Set values for various parameters
     num_features = 300    # Word vector dimensionality                      
     min_word_count = 1   # Minimum word count                        
@@ -61,7 +60,7 @@ def learn_w2v ( sentences ):
     import logging
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',\
     level=logging.INFO)
-'''
+
     from gensim.models import word2vec
 
     print ("Training model...")
@@ -71,18 +70,28 @@ def learn_w2v ( sentences ):
     
     # If you don't plan to train the model any further, calling 
     # init_sims will make the model much more memory-efficient.
-    # model.init_sims(replace=True)
+    model.init_sims(replace=True)
     
     # It can be helpful to create a meaningful model name and 
     # save the model for later use. You can load it later using Word2Vec.load()
     model_name = "300features_40minwords_10context"
     model.save(model_name)
     print ("Gotovo")
-'''
+    
+def addLists(v1, v2):
+    sum = [x + y for x, y in zip(v1, v2)]
+    if not len(v1) >= len(v2):
+        sum += v2[len(v1):]
+    else:
+        sum += v1[len(v2):]
+
+    return sum
+    
 def makeFeatureVec(words, model, num_features):
     # Function to average all of the word vectors in a given paragraph
     # Pre-initialize an empty numpy array (for speed)
-    featureVec = np.zeros((num_features,),dtype="float32")
+    #featureVec = np.zeros((num_features,),dtype="float32")
+    featureVec = [0]*num_features
     nwords = 0
      
     # Index2word is a list that contains the names of the words in 
@@ -93,10 +102,13 @@ def makeFeatureVec(words, model, num_features):
     for word in words:
         if word in index2word_set: 
             nwords = nwords + 1
-            featureVec = np.add(featureVec,model[word])
+            #featureVec = np.add(featureVec,model[word])
+            featureVec = addLists(featureVec, model[word])
      
     # Divide the result by the number of words to get the average
-    featureVec = np.divide(featureVec,nwords)
+    if nwords > 0:
+        #featureVec = np.divide(featureVec,nwords)
+        featureVec = [i/nwords for i in featureVec]
     return featureVec
 
 
@@ -106,7 +118,10 @@ def getAvgFeatureVecs(questions, model, num_features):
 
     counter = 0 
     # Preallocate a 2D numpy array, for speed
-    questionFeatureVecs = np.zeros((len(questions),num_features),dtype="float32")
+    #questionFeatureVecs = np.zeros((len(questions),num_features),dtype="float32")
+    questionFeatureVecs = []
+    for i in range(0, len(questions)):
+        questionFeatureVecs.append([0]*num_features)
 
     for question in questions:
         # Print a status message every 1000th question
@@ -118,146 +133,62 @@ def getAvgFeatureVecs(questions, model, num_features):
         counter = counter + 1
     return questionFeatureVecs
 
-def get_avg( train ):
-    train_sentences1 = []  
-    train_sentences2 = []
+def get_avg( data ):
+    data_sentences1 = []  
+    data_sentences2 = []
     num_features = 300
+    #Tu je taj brojač i, a vezan je za iduće dvije petlje
     i = 0
 
     print ("Parsing sentences from training set")
-    for question in train["question1"]:
-        i += 1
-        if i<20:
-            train_sentences1 += question_to_sentences( question, remove_stopwords = True )
+    for question in data["question1"]:
+        if i < 100:
+            data_sentences1 += question_to_sentences( question, remove_stopwords = True )
         else: exit
-
-    i = 0
-    for question in train["question2"]:
         i += 1
-        if i<20:
-            train_sentences2 += question_to_sentences( question, remove_stopwords = True )
-        else: exit
-        
-    #train_allQuestions = train_sentences1 + train_sentences2
     
-    #learn_w2v(allQuestions)
+    i = 0
+    for question in data["question2"]:
+        if i < 100:
+            data_sentences2 += question_to_sentences( question, remove_stopwords = True )
+        else: exit
+        i += 1
+
     from gensim.models import Word2Vec
     model = Word2Vec.load("300features_40minwords_10context")
+
+    DataVecs1 = coo_matrix(getAvgFeatureVecs( data_sentences1, model, num_features ))
+    DataVecs2 = coo_matrix(getAvgFeatureVecs( data_sentences2, model, num_features ))
     
-    trainDataVecs1 = getAvgFeatureVecs( train_sentences1, model, num_features )
-    trainDataVecs2 = getAvgFeatureVecs( train_sentences2, model, num_features )
-    
-    #U OVOJ SLJEDEĆOJ LINIJI JE PROBLEM!!!
-    trainDataVecs = np.asarray([trainDataVecs1, trainDataVecs2])
-    #trainDataVecs = hstack(trainDataVecs).tocsr
+    DataVecs = hstack([DataVecs1, DataVecs2]).toarray()
+
+    return DataVecs
 
     
-    return trainDataVecs
-  
-            
-train = pd.read_csv('train.csv', sep=',', header=0, lineterminator="\n")
-test = pd.read_csv('test.csv', sep=',', header=0, lineterminator="\n")
-
-question1 = []
-question2 = []
-
-for question in train["question1"]:
-    question1 += question_to_sentences(question, False)
-    
-for question in train["question2"]:
-    question2 += question_to_sentences(question, False)
-    
-allQuestion = question1 + question2
-learn_w2v(allQuestion) 
-   
-
-train = pd.read_csv('train.csv', sep=',', header=0, lineterminator="\n")
-test = pd.read_csv('test.csv', sep=',', header=0, lineterminator="\n")
-
-data = []
-
-for duplicate in train["is_duplicate"]:
-    data.append( int(duplicate))
-
-trainDataVecs = get_avg( train )
-testDataVecs = get_avg( test )
-
-'''
 def learnModel( train ):
-    if os.path.isfile("Word2VecSVMNauceni.pkl"):
-        return None
-    question1 = []
-    question2 = []
+
     data = []
-    i = 0
-    for question in train["question1"]:
-        i += 1
-        if i < 20:
-            question1 += question_to_sentences(question, False)
-        else: exit
-
-    i = 0
-    for question in train["question2"]:
-        i += 1
-        if i < 20:
-            question2 += question_to_sentences(question, False)
-        else: exit
-'''
-
-def learnModel(data):
-    if os.path.isfile("Word2VecSVMNauceni.pkl"):
-        return None
-    data[0] = question1(data[0])
-    data[1] = question2(data[1])
-    # Initialize the "CountVectorizer" object, which is scikit-learn's
-    # bag of words tool.  
-    vectorizer = CountVectorizer(analyzer = "word",   \
-                             tokenizer = None,    \
-                             preprocessor = None, \
-                             stop_words = None,   \
-                             max_features = 10000) 
-    
-    allQuestions = data[0] + data[1]
-
-    vectorizer.fit(allQuestions)    
-    joblib.dump(vectorizer, 'Word2VecVectorizerNauceni.pkl') 
-    
-    znacajkePitanja = [vectorizer.transform(data[0]), vectorizer.transform(data[1])]
-    for i, r in enumerate(data[2]):
-        data[2][i] = int(r)
+    for duplicate in train["is_duplicate"]:
+        data.append( int(duplicate))
         
-    znacajkePitanja = hstack(znacajkePitanja).tocsr()
-    svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=1000000)
+    znacajkePitanja = get_avg(train)
+    svmKlasifikator = SVC(kernel='rbf', verbose=True, probability=True, max_iter=10000)
    
     print("Learning started")
     tmStart = timer()
-    svmKlasifikator.fit(znacajkePitanja, data[2])
+    svmKlasifikator.fit(znacajkePitanja, data)
     tmEnd = timer()
     print("Learning ended")
     print("Learning lasted", tmEnd - tmStart)
     
     joblib.dump(svmKlasifikator, 'Word2VecSVMNauceni.pkl') 
     print("Spremljen je napredak ucenja")
-'''
-def loadData(strFileName):
-    data = pd.read_csv(strFileName, sep=',', lineterminator="\n")
-    dataTable = []
     
-    for j, c in enumerate(data):
-        dataTable.append([])
-        for cell in data[c]:
-            dataTable[j].append(cell)
-        
-    return dataTable
-
 def predict(data, strOutputfile):
     svmModel = joblib.load('Word2VecSVMNauceni.pkl')
-    vectorizer = joblib.load('Word2VecVectorizerNauceni.pkl')
-    data[0] = question1(data[0])
-    data[1] = question2(data[1])
     
-    znacajkePitanja = [vectorizer.transform(data[0]), vectorizer.transform(data[1])]    
-    znacajkePitanja = hstack(znacajkePitanja).tocsr()
+    znacajkePitanja = get_avg( data )
+    
     print("Predicting started")
     tmStart = timer()
     prediction = svmModel.predict(znacajkePitanja)
@@ -272,9 +203,9 @@ def predict(data, strOutputfile):
         
     print("Prediction saved: Done")
 
-learningTable = loadData('train.csv')
-learnModel(learningTable[3:6])
-testTable = loadData('test.csv')
-predictionData = [testTable[1], testTable[2]]
-predict(predictionData, 'predikcija.out')
-'''
+#train = pd.read_csv('train.csv', sep=',', header=0, lineterminator="\n")
+test = pd.read_csv('test.csv', sep=',', header=0, lineterminator="\n")
+
+#learn_w2v(train)
+#learnModel( train )
+predict(test, 'w2vPredikcija.out')
